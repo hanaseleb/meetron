@@ -66,8 +66,8 @@ try {
         <input placeholder="名前を入力">
         <button aria-label="マイク (Jabra PanaCast 20)">Jabra PanaCast 20</button>
         <button aria-label="スピーカー (MPM-4000U)">MPM-4000U</button>
-        <button aria-label="ミュート" onclick="this.setAttribute('aria-label', 'ミュート解除')">Mic</button>
-        <button aria-label="カメラをオフ" onclick="this.setAttribute('aria-label', 'カメラをオン')">Camera</button>
+        <button aria-label="マイクをオフにする" onclick="this.setAttribute('aria-label', 'マイクをオンにする')">Mic</button>
+        <button aria-label="カメラをオフにする" onclick="this.setAttribute('aria-label', 'カメラをオンにする')">Camera</button>
         <button aria-label="今すぐ参加">Join</button>
       </body></html>`
         : `<!doctype html><html><body>

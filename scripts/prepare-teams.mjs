@@ -246,10 +246,10 @@ const microphoneDevice = await selectDevice(microphoneLabel, options.microphoneD
 const speakerDevice = await selectDevice(speakerLabel, options.speakerDevice, speakerControl);
 
 const turnMicrophoneOn = page.getByRole("button", {
-  name: /^(ミュート解除|マイクをオン|unmute|turn microphone on)(?:\s|$)/i,
+  name: /^(ミュート解除|マイクをオン(?:にする)?|unmute|turn microphone on)(?:\s|$)/i,
 });
 const turnMicrophoneOff = page.getByRole("button", {
-  name: /^(ミュート|マイクをオフ|mute|turn microphone off)(?:\s|$)/i,
+  name: /^(ミュート|マイクをオフ(?:にする)?|mute|turn microphone off)(?:\s|$)/i,
 });
 let microphoneMuted = await locatorIsVisible(turnMicrophoneOn);
 if (!microphoneMuted && await locatorIsVisible(turnMicrophoneOff)) {
@@ -262,10 +262,10 @@ if (!microphoneMuted) {
 }
 
 const turnCameraOn = page.getByRole("button", {
-  name: /^(カメラをオン|ビデオを開始|turn camera on|start video)(?:\s|$)/i,
+  name: /^(カメラをオン(?:にする)?|ビデオを開始|turn camera on|start video)(?:\s|$)/i,
 });
 const turnCameraOff = page.getByRole("button", {
-  name: /^(カメラをオフ|ビデオを停止|turn camera off|stop video)(?:\s|$)/i,
+  name: /^(カメラをオフ(?:にする)?|ビデオを停止|turn camera off|stop video)(?:\s|$)/i,
 });
 let cameraDisabled = await locatorIsVisible(turnCameraOn);
 if (!cameraDisabled && await locatorIsVisible(turnCameraOff)) {
