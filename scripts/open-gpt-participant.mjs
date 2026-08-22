@@ -5,7 +5,10 @@ import { mkdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
-import { buildDedicatedBrowserLaunch } from "./dedicated-browser-runtime.mjs";
+import {
+  buildDedicatedBrowserLaunch,
+  isDedicatedBrowserEndpoint,
+} from "./dedicated-browser-runtime.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const options = {
@@ -113,14 +116,23 @@ mkdirSync(launch.profileDir, { recursive: true });
 
 async function endpointReady() {
   try {
-    const activePort = readFileSync(resolve(launch.profileDir, "DevToolsActivePort"), "utf8")
-      .split(/\r?\n/, 1)[0];
-    if (activePort !== String(launch.cdpPort)) return false;
+    let activePort = "";
+    try {
+      activePort = readFileSync(resolve(launch.profileDir, "DevToolsActivePort"), "utf8")
+        .split(/\r?\n/, 1)[0];
+    } catch {
+      // Edge may omit Chromium's profile marker; validate its CDP product below.
+    }
     const response = await fetch(`${launch.cdpEndpoint}/json/version`, {
       signal: AbortSignal.timeout(750),
     });
     const body = await response.json();
-    return response.ok && typeof body.webSocketDebuggerUrl === "string";
+    return response.ok && isDedicatedBrowserEndpoint({
+      activePort,
+      browser: launch.browser,
+      cdpPort: launch.cdpPort,
+      version: body,
+    });
   } catch {
     return false;
   }

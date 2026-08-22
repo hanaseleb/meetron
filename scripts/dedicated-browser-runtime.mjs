@@ -141,3 +141,21 @@ export function buildDedicatedBrowserLaunch({
     ],
   };
 }
+
+export function isDedicatedBrowserEndpoint({
+  activePort = "",
+  browser,
+  cdpPort,
+  version = {},
+} = {}) {
+  const product = String(version.Browser || "");
+  const hasDebugger = typeof version.webSocketDebuggerUrl === "string";
+  const productMatches = browser === "edge"
+    ? /^Edg\//i.test(product)
+    : /^(?:Chrome|Chromium)\//i.test(product);
+  if (!hasDebugger || !productMatches) return false;
+
+  // Chromium writes this marker, but Windows Edge can expose a valid CDP
+  // endpoint without leaving it in the user-data directory.
+  return browser === "edge" || activePort === String(cdpPort);
+}

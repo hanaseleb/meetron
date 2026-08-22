@@ -5,6 +5,7 @@ import {
   browserExecutableCandidates,
   buildDedicatedBrowserLaunch,
   defaultDedicatedProfileDir,
+  isDedicatedBrowserEndpoint,
   resolveBrowserExecutable,
 } from "../scripts/dedicated-browser-runtime.mjs";
 
@@ -69,5 +70,31 @@ assert.throws(() => buildDedicatedBrowserLaunch({
   pathExists: () => true,
   platform: "win32",
 }), /会議URL/);
+
+const edgeVersion = {
+  Browser: "Edg/151.0.4129.78",
+  webSocketDebuggerUrl: "ws://127.0.0.1:9223/devtools/browser/test",
+};
+assert.equal(isDedicatedBrowserEndpoint({
+  activePort: "",
+  browser: "edge",
+  cdpPort: 9223,
+  version: edgeVersion,
+}), true);
+assert.equal(isDedicatedBrowserEndpoint({
+  activePort: "",
+  browser: "chrome",
+  cdpPort: 9223,
+  version: {
+    Browser: "Chrome/151.0.0.0",
+    webSocketDebuggerUrl: "ws://127.0.0.1:9223/devtools/browser/test",
+  },
+}), false);
+assert.equal(isDedicatedBrowserEndpoint({
+  activePort: "9223",
+  browser: "edge",
+  cdpPort: 9223,
+  version: { ...edgeVersion, Browser: "Chrome/151.0.0.0" },
+}), false);
 
 process.stdout.write("Dedicated browser runtime tests passed.\n");
