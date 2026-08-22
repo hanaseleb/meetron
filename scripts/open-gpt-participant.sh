@@ -24,7 +24,7 @@ usage() {
   cat <<'EOF'
 Usage: ./scripts/open-gpt-participant.sh [options] MEETING_URL
 
-Opens a Google Meet or Zoom tab in the shared Meetron Chrome profile.
+Opens a Google Meet, Microsoft Teams Web, or Zoom tab in the shared Meetron Chrome profile.
 
 Environment variables:
   MEETING_COPILOT_CHROME_PATH   Override the Google Chrome .app path.
@@ -44,6 +44,7 @@ Examples:
   ./scripts/open-gpt-participant.sh https://meet.google.com/xxx-yyyy-zzz
   ./scripts/open-gpt-participant.sh --auto-prepare --restart-profile https://meet.google.com/xxx-yyyy-zzz
   ./scripts/open-gpt-participant.sh --join --restart-profile https://meet.google.com/xxx-yyyy-zzz
+  ./scripts/open-gpt-participant.sh 'https://teams.microsoft.com/l/meetup-join/...'
   ./scripts/open-gpt-participant.sh https://zoom.us/j/123456789
 EOF
 }
@@ -105,12 +106,15 @@ case "$meeting_url" in
   https://meet.google.com/*)
     meeting_provider='Google Meet'
     ;;
+  https://teams.microsoft.com/l/meetup-join/*|https://teams.microsoft.com/v2/l/meetup-join/*|https://teams.microsoft.com/meet/*)
+    meeting_provider='Microsoft Teams Web'
+    ;;
   https://zoom.us/j/*|https://zoom.us/wc/*|https://*.zoom.us/j/*|https://*.zoom.us/wc/*)
     meeting_provider='Zoom'
     ;;
   *)
     printf 'Unsupported meeting URL: %s\n' "$meeting_url" >&2
-    printf 'Only HTTPS Google Meet and Zoom meeting URLs are accepted.\n' >&2
+    printf 'Only HTTPS Google Meet, Microsoft Teams Web, and Zoom meeting URLs are accepted.\n' >&2
     exit 2
     ;;
 esac

@@ -16,6 +16,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { getAudioStatus } from "./audio-backend.mjs";
+import { normalizeMeetingJoinUrl } from "./meeting-provider.mjs";
 import { connectToChromeOverCDP } from "./playwright-cdp.mjs";
 
 const EXTENSION_ID = "jlikakgdldiihhflkobhnpfegjlcakdd";
@@ -612,25 +613,9 @@ function getMeetMicrophoneState() {
 }
 
 function normalizeMeetingUrl(value) {
-  let url;
-  try {
-    url = new URL(String(value || "").trim());
-  } catch {
-    throw new Error("有効なGoogle Meet URLを入力してください");
-  }
-
-  if (
-    url.protocol !== "https:" ||
-    url.hostname !== "meet.google.com" ||
-    url.port ||
-    url.username ||
-    url.password ||
-    !/^\/[a-z]{3}-[a-z]{4}-[a-z]{3}\/?$/i.test(url.pathname)
-  ) {
-    throw new Error("https://meet.google.com/xxx-xxxx-xxx 形式のURLを入力してください");
-  }
-  url.hash = "";
-  return url.toString();
+  return normalizeMeetingJoinUrl(value, {
+    allowedProviders: ["google-meet"],
+  }).url;
 }
 
 function startMeeting(payload) {

@@ -360,6 +360,12 @@ else
   fail 'audio backend selection and route isolation'
 fi
 
+if node "$repo_root/tests/meeting-provider-test.mjs" >/dev/null; then
+  pass 'meeting provider URL validation'
+else
+  fail 'meeting provider URL validation'
+fi
+
 if node "$repo_root/tests/session-cancel-test.mjs" >/dev/null; then
   pass 'session stop cancels an in-progress launch'
 else
@@ -424,6 +430,26 @@ if printf '%s\n' "$launcher_output" | grep -F -- '--user-data-dir=' >/dev/null; 
   pass 'Meet launcher dry run'
 else
   fail 'Meet launcher dry run'
+fi
+
+teams_launcher_output="$(MEETING_COPILOT_CHROME_PATH="$fake_chrome" \
+  MEETING_COPILOT_PROFILE_DIR="$temp_dir/profile" \
+  "$repo_root/scripts/open-gpt-participant.sh" --dry-run \
+  'https://teams.microsoft.com/l/meetup-join/19%3ameeting_example%40thread.v2/0?context=%7B%7D')"
+if printf '%s\n' "$teams_launcher_output" | grep -F -- 'Provider:     Microsoft Teams Web' >/dev/null &&
+  printf '%s\n' "$teams_launcher_output" | grep -F -- '--user-data-dir=' >/dev/null; then
+  pass 'Teams Web low-level launcher dry run'
+else
+  fail 'Teams Web low-level launcher dry run'
+fi
+
+if MEETING_COPILOT_CHROME_PATH="$fake_chrome" \
+  "$repo_root/scripts/open-gpt-participant.sh" --auto-prepare --dry-run \
+  'https://teams.microsoft.com/l/meetup-join/19%3ameeting_example%40thread.v2/0?context=%7B%7D' \
+  >/dev/null 2>&1; then
+  fail 'Teams Web launcher rejects unimplemented automatic preparation'
+else
+  pass 'Teams Web launcher rejects unimplemented automatic preparation'
 fi
 
 auto_launcher_output="$(MEETING_COPILOT_CHROME_PATH="$fake_chrome" \
