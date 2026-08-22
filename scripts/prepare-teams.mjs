@@ -78,6 +78,11 @@ function exactDevicePattern(name) {
   return new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i");
 }
 
+function selectedDevicePattern(name) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|[\\s(:])${escaped}(?:[\\s)]|$)`, "i");
+}
+
 async function locatorIsVisible(locator) {
   try {
     return (await locator.count()) > 0 && (await locator.first().isVisible());
@@ -114,6 +119,7 @@ const teamsPages = context
   .pages()
   .filter((candidate) => isMeetingProviderPage(candidate.url(), "microsoft-teams"));
 let page = teamsPages.find((candidate) => candidate.url().startsWith(options.url));
+page ||= teamsPages.at(-1);
 await Promise.all(
   teamsPages.filter((candidate) => candidate !== page).map((candidate) => candidate.close()),
 );
@@ -151,27 +157,51 @@ for (const field of [
   }
 }
 
-const openedDeviceSettings = await clickFirst([
-  page.getByRole("button", { name: /デバイスの設定|オーディオの設定|device settings|audio settings/i }),
-  page.getByLabel(/デバイスの設定|オーディオの設定|device settings|audio settings/i),
-]);
-if (!openedDeviceSettings) {
-  throw new Error("Teamsのデバイス設定を開けませんでした");
-}
+const microphoneLabel = /^(?:マイク|Microphone)(?:\s*[:(]\s*.+|\s*)$/i;
+const speakerLabel = /^(?:スピーカー|Speaker)(?:\s*[:(]\s*.+|\s*)$/i;
 
-async function selectDevice(label, targetName) {
-  const pattern = exactDevicePattern(targetName);
-  const candidates = [
+function deviceControlCandidates(label) {
+  return [
     page.getByRole("combobox", { name: label }),
+    page.getByRole("button", { name: label }),
     page.getByLabel(label),
   ];
-  let control;
-  for (const candidate of candidates) {
-    if (await locatorIsVisible(candidate)) {
-      control = candidate.first();
-      break;
-    }
+}
+
+async function findDeviceControl(label) {
+  for (const candidate of deviceControlCandidates(label)) {
+    if (await locatorIsVisible(candidate)) return candidate.first();
   }
+  return null;
+}
+
+let microphoneControl = await findDeviceControl(microphoneLabel);
+let speakerControl = await findDeviceControl(speakerLabel);
+if (!microphoneControl || !speakerControl) {
+  const openedDeviceSettings = await clickFirst([
+    page.getByRole("button", { name: /デバイスの設定|オーディオの設定|device settings|audio settings/i }),
+    page.getByLabel(/デバイスの設定|オーディオの設定|device settings|audio settings/i),
+  ]);
+  if (!openedDeviceSettings) {
+    const visibleButtons = await page.getByRole("button").evaluateAll((buttons) =>
+      buttons
+        .filter((button) => button.getClientRects().length > 0)
+        .map((button) => button.getAttribute("aria-label") || button.textContent?.trim())
+        .filter(Boolean),
+    );
+    throw new Error(
+      `Teamsの音声デバイス欄またはデバイス設定が見つかりませんでした ` +
+      `(buttons: ${visibleButtons.join(", ") || "none"})`,
+    );
+  }
+  microphoneControl = await findDeviceControl(microphoneLabel);
+  speakerControl = await findDeviceControl(speakerLabel);
+}
+
+async function selectDevice(label, targetName, knownControl) {
+  const pattern = exactDevicePattern(targetName);
+  const selectedPattern = selectedDevicePattern(targetName);
+  const control = knownControl || await findDeviceControl(label);
   if (!control) {
     throw new Error(`Teamsの音声デバイス欄が見つかりません: ${label}`);
   }
@@ -185,7 +215,7 @@ async function selectDevice(label, targetName) {
       await control.getAttribute("value"),
       await control.textContent(),
     ].filter(Boolean).join(" ");
-    if (!pattern.test(current.trim())) {
+    if (!selectedPattern.test(current.trim())) {
       await control.click();
       const option = page.getByRole("option", { name: pattern });
       const menuItem = page.getByRole("menuitemradio", { name: pattern });
@@ -206,14 +236,14 @@ async function selectDevice(label, targetName) {
         await control.getAttribute("value"),
         await control.textContent(),
       ].filter(Boolean).join(" ");
-  if (!pattern.test(String(selected || "").trim())) {
+  if (!selectedPattern.test(String(selected || "").trim())) {
     throw new Error(`Teams did not select the required audio device: ${targetName}`);
   }
-  return String(selected).trim();
+  return tagName === "select" ? String(selected).trim() : targetName;
 }
 
-const microphoneDevice = await selectDevice(/^(マイク|Microphone)$/i, options.microphoneDevice);
-const speakerDevice = await selectDevice(/^(スピーカー|Speaker)$/i, options.speakerDevice);
+const microphoneDevice = await selectDevice(microphoneLabel, options.microphoneDevice, microphoneControl);
+const speakerDevice = await selectDevice(speakerLabel, options.speakerDevice, speakerControl);
 
 const turnMicrophoneOn = page.getByRole("button", {
   name: /^(ミュート解除|マイクをオン|unmute|turn microphone on)(?:\s|$)/i,

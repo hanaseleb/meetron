@@ -57,10 +57,20 @@ try {
 
   browser = await connectToChromeOverCDP(`http://127.0.0.1:${port}`);
   const context = browser.contexts()[0];
-  await context.route("https://teams.microsoft.com/**", (route) =>
-    route.fulfill({
-      contentType: "text/html",
-      body: `<!doctype html><html><body>
+  await context.route("https://teams.microsoft.com/**", (route) => {
+    const inlineDevices = route.request().url().includes("inline=1");
+    return route.fulfill({
+      contentType: "text/html; charset=utf-8",
+      body: inlineDevices
+        ? `<!doctype html><html><body>
+        <input placeholder="名前を入力">
+        <button aria-label="マイク (Jabra PanaCast 20)">Jabra PanaCast 20</button>
+        <button aria-label="スピーカー (MPM-4000U)">MPM-4000U</button>
+        <button aria-label="ミュート" onclick="this.setAttribute('aria-label', 'ミュート解除')">Mic</button>
+        <button aria-label="カメラをオフ" onclick="this.setAttribute('aria-label', 'カメラをオン')">Camera</button>
+        <button aria-label="今すぐ参加">Join</button>
+      </body></html>`
+        : `<!doctype html><html><body>
         <button aria-label="Continue on this browser" onclick="this.remove()">Continue</button>
         <input aria-label="Type your name">
         <button aria-label="Device settings" onclick="document.querySelector('#devices').hidden = false">Devices</button>
@@ -78,8 +88,8 @@ try {
         <button aria-label="Turn camera on">Camera</button>
         <button aria-label="Join now" onclick="this.remove(); const leave = document.createElement('button'); leave.setAttribute('aria-label', 'Leave'); document.body.append(leave)">Join</button>
       </body></html>`,
-    }),
-  );
+    });
+  });
 
   const meetingUrl = "https://teams.microsoft.com/l/meetup-join/19%3ameeting_example%40thread.v2/0?context=%7B%7D";
   const { stdout } = await execFileAsync(process.execPath, [
@@ -108,6 +118,36 @@ try {
     result.joinStatus !== "joined"
   ) {
     throw new Error(`Teams preparation failed: ${stdout}`);
+  }
+
+  const inlineMeetingUrl = "https://teams.microsoft.com/meet/1234567890123?inline=1";
+  await Promise.all(
+    context.pages()
+      .filter((page) => page.url().startsWith("https://teams.microsoft.com/"))
+      .map((page) => page.close()),
+  );
+  const redirectedPrejoin = await context.newPage();
+  await redirectedPrejoin.goto("https://teams.microsoft.com/v2/?meetingjoin=true&inline=1");
+  const inlineResult = JSON.parse((await execFileAsync(process.execPath, [
+    resolve(repoRoot, "scripts/prepare-teams.mjs"),
+    "--cdp",
+    `http://127.0.0.1:${port}`,
+    "--url",
+    inlineMeetingUrl,
+    "--microphone-device",
+    "Jabra PanaCast 20",
+    "--speaker-device",
+    "MPM-4000U",
+  ], { cwd: repoRoot, timeout: 30_000 })).stdout);
+  if (
+    inlineResult.participantNameFilled !== true ||
+    inlineResult.microphoneMuted !== true ||
+    inlineResult.cameraDisabled !== true ||
+    inlineResult.microphoneDevice !== "Jabra PanaCast 20" ||
+    inlineResult.speakerDevice !== "MPM-4000U" ||
+    inlineResult.joinStatus !== "not-requested"
+  ) {
+    throw new Error(`Inline Teams preparation failed: ${JSON.stringify(inlineResult)}`);
   }
 } finally {
   await browser?.close().catch(() => {});
