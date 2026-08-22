@@ -134,7 +134,6 @@ export function buildDedicatedBrowserLaunch({
     args: [
       "--remote-debugging-address=127.0.0.1",
       `--remote-debugging-port=${numericPort}`,
-      "--use-fake-ui-for-media-stream",
       `--user-data-dir=${selectedProfileDir}`,
       "--no-first-run",
       "--new-window",

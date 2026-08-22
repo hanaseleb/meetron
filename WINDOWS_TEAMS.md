@@ -62,6 +62,7 @@ node .\scripts\open-gpt-participant.mjs `
 
 このコマンドは`$env:LOCALAPPDATA\Meetron\GPTParticipantChromium`を作成し、Edgeを起動します。
 Windowsの既定ブラウザー、通常のEdgeプロファイル、音声設定は変更しません。
+カメラとマイクの権限はTeamsの画面または自動準備処理から付与し、Edgeが非対応として警告するメディア自動許可フラグは使用しません。
 
 成功すると、PowerShellに`Dedicated meeting browser is ready.`と表示されます。
 初回は専用ウィンドウでTeamsへのサインインやCookie同意が必要になる場合があります。

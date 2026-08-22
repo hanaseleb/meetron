@@ -48,6 +48,7 @@ assert.equal(launch.provider, "microsoft-teams");
 assert.equal(launch.cdpEndpoint, "http://127.0.0.1:9333");
 assert(launch.args.includes("--remote-debugging-address=127.0.0.1"));
 assert(launch.args.includes("--user-data-dir=C:\\Users\\Tester\\AppData\\Local\\Meetron\\GPTParticipantChromium"));
+assert(!launch.args.includes("--use-fake-ui-for-media-stream"));
 assert(!launch.url.includes("#"));
 
 for (const port of [80, 65_536, "invalid"]) {
