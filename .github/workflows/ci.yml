@@ -32,10 +32,26 @@ jobs:
       - run: npm run test:package
       - run: npm audit --audit-level=high
 
+  windows-browser-runtime:
+    name: test Windows browser runtime
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:browser-runtime
+      - run: node ./tests/meeting-provider-test.mjs
+
   test:
     if: always()
-    needs: platform-tests
+    needs: [platform-tests, windows-browser-runtime]
     runs-on: ubuntu-latest
     steps:
-      - name: Require every macOS test job to pass
-        run: test '${{ needs.platform-tests.result }}' = 'success'
+      - name: Require every platform test job to pass
+        run: |
+          test '${{ needs.platform-tests.result }}' = 'success'
+          test '${{ needs.windows-browser-runtime.result }}' = 'success'

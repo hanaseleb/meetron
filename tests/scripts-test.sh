@@ -372,6 +372,12 @@ else
   fail 'meeting provider URL validation'
 fi
 
+if node "$repo_root/tests/dedicated-browser-runtime-test.mjs" >/dev/null; then
+  pass 'cross-platform dedicated browser runtime'
+else
+  fail 'cross-platform dedicated browser runtime'
+fi
+
 if node "$repo_root/tests/session-cancel-test.mjs" >/dev/null; then
   pass 'session stop cancels an in-progress launch'
 else

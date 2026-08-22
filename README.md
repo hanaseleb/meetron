@@ -35,6 +35,11 @@ https://github.com/bb8ad8/meetron のMeetronをこのMacへcloneし、READMEの�
 
 Intel MacとmacOS 13〜15では未検証のベストエフォート対応です。音声PKGはApple Silicon / IntelのUniversal Binaryとしてビルドします。Chrome Web Store版はなく、GitHubから取得した拡張をデベロッパーモードで読み込みます。
 
+Windows 11向けに、ChromeまたはEdgeの専用プロファイル起動とMicrosoft Teams Webの参加前設定を実装しています。
+コード上の自動テストは通過していますが、Windows実機では検証中です。
+この段階ではブラウザー制御だけを利用でき、仮想音声デバイス、Native Messaging Host、統合セットアップは未対応です。
+検証手順は[Windows 11とTeams Webの開発者向け検証](WINDOWS_TEAMS.md)を参照してください。
+
 ## Meetron Setup.commandが行うこと
 
 GitHubからcloneした後は、Finderでリポジトリを開き、`Meetron Setup.command`をダブルクリックします。セットアップは現在の状態を判定し、次に必要な操作だけを表示します。
