@@ -119,8 +119,8 @@ case "$meeting_url" in
     ;;
 esac
 
-if [ "$auto_prepare" -eq 1 ] && [ "$meeting_provider" != 'Google Meet' ]; then
-  printf 'Automated preparation currently supports Google Meet only.\n' >&2
+if [ "$auto_prepare" -eq 1 ] && [ "$meeting_provider" = 'Zoom' ]; then
+  printf 'Automated preparation currently supports Google Meet and Microsoft Teams Web only.\n' >&2
   exit 2
 fi
 
@@ -242,6 +242,14 @@ while ! dedicated_endpoint_ready; do
 done
 
 if [ "$auto_prepare" -eq 1 ]; then
+  case "$meeting_provider" in
+    'Google Meet') prepare_script='prepare-meet.mjs' ;;
+    'Microsoft Teams Web') prepare_script='prepare-teams.mjs' ;;
+    *)
+      printf 'Automated preparation is unavailable for %s.\n' "$meeting_provider" >&2
+      exit 2
+      ;;
+  esac
   prepare_args=(
     --cdp "http://127.0.0.1:$cdp_port"
     --name "$participant_name"
@@ -252,7 +260,7 @@ if [ "$auto_prepare" -eq 1 ]; then
   fi
 
   set +e
-  node "$repo_root/scripts/prepare-meet.mjs" \
+  node "$repo_root/scripts/$prepare_script" \
     "${prepare_args[@]}"
   prepare_status=$?
   set -e

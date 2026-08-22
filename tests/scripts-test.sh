@@ -272,6 +272,12 @@ else
   fail 'Meet preparation help'
 fi
 
+if node "$repo_root/scripts/prepare-teams.mjs" --help >/dev/null; then
+  pass 'Teams Web preparation help'
+else
+  fail 'Teams Web preparation help'
+fi
+
 if node "$repo_root/scripts/prepare-chatgpt-live.mjs" --help >/dev/null; then
   pass 'ChatGPT Voice preparation help'
 else
@@ -411,6 +417,12 @@ else
   pass 'extension panel and popup UI browser test (skipped: Chrome not installed)'
 fi
 
+if node "$repo_root/tests/prepare-teams-test.mjs" >/dev/null; then
+  pass 'Teams Web pre-join preparation and admission'
+else
+  fail 'Teams Web pre-join preparation and admission'
+fi
+
 native_manifest_output="$(PATH=/usr/bin:/bin \
   MEETING_COPILOT_NODE_PATH="$node_binary" \
   MEETING_COPILOT_PROFILE_DIR="$temp_dir/dedicated-profile" \
@@ -443,13 +455,14 @@ else
   fail 'Teams Web low-level launcher dry run'
 fi
 
-if MEETING_COPILOT_CHROME_PATH="$fake_chrome" \
+teams_auto_launcher_output="$(MEETING_COPILOT_CHROME_PATH="$fake_chrome" \
   "$repo_root/scripts/open-gpt-participant.sh" --auto-prepare --dry-run \
   'https://teams.microsoft.com/l/meetup-join/19%3ameeting_example%40thread.v2/0?context=%7B%7D' \
-  >/dev/null 2>&1; then
-  fail 'Teams Web launcher rejects unimplemented automatic preparation'
+  2>&1)"
+if printf '%s\n' "$teams_auto_launcher_output" | grep -F -- '--use-fake-ui-for-media-stream' >/dev/null; then
+  pass 'Teams Web automated preparation dry run'
 else
-  pass 'Teams Web launcher rejects unimplemented automatic preparation'
+  fail 'Teams Web automated preparation dry run'
 fi
 
 auto_launcher_output="$(MEETING_COPILOT_CHROME_PATH="$fake_chrome" \
