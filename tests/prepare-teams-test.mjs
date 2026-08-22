@@ -58,10 +58,16 @@ try {
   browser = await connectToChromeOverCDP(`http://127.0.0.1:${port}`);
   const context = browser.contexts()[0];
   await context.route("https://teams.microsoft.com/**", (route) => {
+    const browserChoice = route.request().url().includes("/dl/launcher/");
     const inlineDevices = route.request().url().includes("inline=1");
     return route.fulfill({
       contentType: "text/html; charset=utf-8",
-      body: inlineDevices
+      body: browserChoice
+        ? `<!doctype html><html><body>
+        <button aria-label="このブラウザーから会議に参加します">Browser</button>
+        <button aria-label="Teams アプリを開いて会議に参加します">App</button>
+      </body></html>`
+        : inlineDevices
         ? `<!doctype html><html><body>
         <input placeholder="名前を入力">
         <button aria-label="マイク (Jabra PanaCast 20)">Jabra PanaCast 20</button>
@@ -71,7 +77,7 @@ try {
         <button aria-label="今すぐ参加">Join</button>
       </body></html>`
         : `<!doctype html><html><body>
-        <button aria-label="Continue on this browser" onclick="this.remove()">Continue</button>
+        <button aria-label="このブラウザーから会議に参加します" onclick="this.remove()">Continue</button>
         <input aria-label="Type your name">
         <button aria-label="Device settings" onclick="document.querySelector('#devices').hidden = false">Devices</button>
         <div id="devices" hidden>
@@ -128,6 +134,8 @@ try {
   );
   const redirectedPrejoin = await context.newPage();
   await redirectedPrejoin.goto("https://teams.microsoft.com/v2/?meetingjoin=true&inline=1");
+  const staleLauncher = await context.newPage();
+  await staleLauncher.goto("https://teams.microsoft.com/dl/launcher/launcher.html");
   const inlineResult = JSON.parse((await execFileAsync(process.execPath, [
     resolve(repoRoot, "scripts/prepare-teams.mjs"),
     "--cdp",

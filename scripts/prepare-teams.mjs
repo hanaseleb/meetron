@@ -115,14 +115,35 @@ await context.grantPermissions(["microphone"], {
   origin: "https://teams.microsoft.com",
 });
 
-const teamsPages = context
-  .pages()
-  .filter((candidate) => isMeetingProviderPage(candidate.url(), "microsoft-teams"));
-let page = teamsPages.find((candidate) => candidate.url().startsWith(options.url));
-page ||= teamsPages.at(-1);
-await Promise.all(
-  teamsPages.filter((candidate) => candidate !== page).map((candidate) => candidate.close()),
-);
+function currentTeamsPages() {
+  return context
+    .pages()
+    .filter((candidate) => isMeetingProviderPage(candidate.url(), "microsoft-teams"));
+}
+
+async function pageLooksLikePrejoin(candidate) {
+  const signals = [
+    candidate.getByRole("button", { name: /今すぐ参加|参加をリクエスト|join now|ask to join|join meeting/i }),
+    candidate.getByPlaceholder(/名前を入力|名前|type your name|enter your name/i),
+  ];
+  for (const signal of signals) {
+    if (await locatorIsVisible(signal)) return true;
+  }
+  return false;
+}
+
+let teamsPages = currentTeamsPages();
+const exactMeetingPage = teamsPages.find((candidate) => candidate.url().startsWith(options.url));
+let prejoinPage = null;
+for (const candidate of [...teamsPages].reverse()) {
+  if (await pageLooksLikePrejoin(candidate)) {
+    prejoinPage = candidate;
+    break;
+  }
+}
+let page = prejoinPage && prejoinPage !== exactMeetingPage
+  ? prejoinPage
+  : exactMeetingPage || prejoinPage || teamsPages.at(-1);
 
 if (!page) {
   page = await context.newPage();
@@ -134,12 +155,29 @@ await page.waitForLoadState("domcontentloaded");
 page.setDefaultTimeout(5_000);
 
 const continuedInBrowser = await clickFirst([
-  page.getByRole("button", { name: /このブラウザーで続ける|このブラウザで続ける|continue on this browser/i }),
-  page.getByRole("link", { name: /このブラウザーで続ける|このブラウザで続ける|continue on this browser/i }),
+  page.getByRole("button", { name: /このブラウザー(?:から会議に参加します|で続ける)|このブラウザで続ける|continue on this browser/i }),
+  page.getByRole("link", { name: /このブラウザー(?:から会議に参加します|で続ける)|このブラウザで続ける|continue on this browser/i }),
 ]);
 if (continuedInBrowser) {
-  await page.waitForTimeout(500);
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    await page.waitForTimeout(250);
+    for (const candidate of [...currentTeamsPages()].reverse()) {
+      if (await pageLooksLikePrejoin(candidate)) {
+        page = candidate;
+        break;
+      }
+    }
+    if (await pageLooksLikePrejoin(page)) break;
+  }
 }
+
+teamsPages = currentTeamsPages();
+await Promise.all(
+  teamsPages.filter((candidate) => candidate !== page).map((candidate) => candidate.close()),
+);
+await page.bringToFront();
+await page.waitForLoadState("domcontentloaded");
+page.setDefaultTimeout(5_000);
 
 let participantNameFilled = false;
 for (const field of [
